@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nginx-{{ENVIRONMENT}}
+  namespace: {{ENVIRONMENT}}
+spec:
+  replicas: 2
+  selector:
+    app: nginx-{{ENVIRONMENT}}
+  template:
+    metadata:
+      name: nginx
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:{{IMAGE_TAG}}
+        ports:
+        - containerPort: {{LISTEN_PORT}}

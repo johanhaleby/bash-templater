@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: templater-example
+  namespace: templates
+spec:
+  replicas: 2
+  selector:
+    app: templater-example
+  template:
+    metadata:
+      name: templater-example
+      namespace: templates
+      labels:
+        app: templater-example
+    spec:
+      containers:
+      - name: templater-example
+        image: johnsmith/templater:latest
+        ports:
+        - containerPort: 80
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: templater-example-svc
+    namespace: templates
+  name: templater-example-svc
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: templater-example
+  type: LoadBalancer

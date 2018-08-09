@@ -1,48 +1,97 @@
+
 # BASH Templater
-Very simple templating system that replace {{VAR}} by $VAR environment value
-Supports default values by writting {{VAR=value}} in the template
 
-## Author
+Very simple templating system that replaces 
+`{{VAR}}` in template files with the value of
+the environment variable `$VAR` environment value
+Supports default values by writting {{VAR=value}} 
+in templates
 
-Sébastien Lavoie <github@lavoie.sl>
-
-Johan Haleby
-
-See http://code.haleby.se/2015/11/20/simple-templating-engine-in-bash/  and http://blog.lavoie.sl/2012/11/simple-templating-system-using-bash.html for more details
 
 ## Installation
 
-To install templater in linux type:
+To install templater on linux or mac type:
 
-    sudo curl -L https://raw.githubusercontent.com/johanhaleby/bash-templater/master/templater.sh -o /usr/local/bin/templater
-    sudo chmod +x /usr/local/bin/templater
+```
+$ mkdir -p ~/.local/bin/
+$ sudo curl -L https://raw.githubusercontent.com/owenstranathan/bash-templater/master/templater.sh -o ~/.local/bin/templater
+$ sudo chmod +x ~/.local/bin/templater
+```
+
+Alternately if you have the program `install` 
+on your system you can use that with curl
+```
+$ mkdir -p ~/.local/bin/
+$ curl https://raw.githubusercontent.com/owenstranathan/bash-templater/master/templater.sh
+$ install templater.sh ~/.local/bin/templater
+```
+if you haven't configured ~/.local/bin to be a part of your path I recommed doing that
+
 
 ## Usage
-	
-```bash
-VAR=value templater template
+
+```
+$ VAR=value templater <template>
 ```
 
 Read variables from file:
-    
-```bash
-templater template -f variables.txt
+
+```
+$ templater <template> -f variables.txt
 ```
 
-e.g.:
-```bash
-# variables.txt
-# The author
-AUTHOR=Johan
-# The version
-VERSION=1.2.3
+If you have a file named `.env` in your calling directory, templater will automatically
+load the variables specified in you `.env` file into its environment
+
+Example:
+
+
+To stop templater from printing warning messages
+
+```
+$ templater <template> -s`
 ```
 
-Don't print any warning messages:
+Templater will also read files from a directory
 
-```bash
-templater template -f variables.txt -s
-```
+`$ templater <template-dir>`
 
-## Examples
-See examples/
+Templater will by default render the templates witha default delimiter of `\n---\n`
+but you can set this to be anything you like by using the `-d` option for example
+
+`$ templater <template-dir> -d "####DELIMITER####"`
+
+will separate template file with the string `####DELIMITER####`
+
+##### NOTE
+
+Templater does not use `getopts` to get options so stringing options like `-ps` is **not** supported.
+
+#### Examples
+
+See [examples](examples/)
+
+#### Testing
+
+Use my simple testing script [bashtest](github.com/owenstranathan/bashtest)
+
+run this in the main project directory
+
+`$ bashtest`
+
+#### More Resources
+
+
+See  
+http://code.haleby.se/2015/11/20/simple-templating-engine-in-bash/  
+and/or  
+http://blog.lavoie.sl/2012/11/simple-templating-system-using-bash.html  
+for some blog posts about usage
+
+#### Author(s)
+
+[Sébastien Lavoie](https://github.com/lavoiesl/bash-templater)
+
+[Johan Haleby](https://github.com/johanhaleby/bash-templater)
+
+[Owen Stranathan](https://github.com/owenstranathan/bash-templater)
