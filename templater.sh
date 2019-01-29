@@ -35,7 +35,7 @@ config_file="<none>"
 print_only="false"
 silent="false"
 
-usage="${PROGNAME} [-h] [-d] [-f] [-s] -- 
+usage="${PROGNAME} [-h] [-d] [-f] [-s] --
 
 where:
     -h, --help
@@ -48,13 +48,13 @@ where:
         Don't print warning messages (for example if no variables are found)
 
 examples:
-    VAR1=Something VAR2=1.2.3 ${PROGNAME} test.txt 
+    VAR1=Something VAR2=1.2.3 ${PROGNAME} test.txt
     ${PROGNAME} test.txt -f my-variables.txt
     ${PROGNAME} test.txt -f my-variables.txt > new-test.txt"
 
 if [ $# -eq 0 ]; then
   echo "$usage"
-  exit 1    
+  exit 1
 fi
 
 if [[ ! -f "${1}" ]]; then
@@ -72,7 +72,7 @@ if [ "$#" -ne 0 ]; then
         -h|--help)
             echo "$usage"
             exit 0
-            ;;        
+            ;;
         -p|--print)
             print_only="true"
             ;;
@@ -108,12 +108,12 @@ fi
 if [ "${config_file}" != "<none>" ]; then
     if [[ ! -f "${config_file}" ]]; then
       echo "The file ${config_file} does not exists" >&2
-      echo "$usage"      
+      echo "$usage"
       exit 1
     fi
 
     source "${config_file}"
-fi    
+fi
 
 var_value() {
     eval echo \$$1
@@ -153,7 +153,7 @@ fi
 
 # Replace all {{VAR}} by $VAR value
 for var in $vars; do
-    value=$(var_value $var | sed -e "s;\&;\\\&;g" -e "s;\ ;\\\ ;g") # '&' and <space> is escaped 
+    value=$(var_value $var | sed -e "s;\&;\\\&;g" -e "s;\ ;\\\ ;g") # '&' and <space> is escaped
     if [[ -z "$value" ]]; then
         if [ $silent == "false" ]; then
             echo "Warning: $var is not defined and no default is set, replacing by empty" >&2
@@ -162,7 +162,7 @@ for var in $vars; do
 
     # Escape slashes
     value=$(echo "$value" | sed 's/\//\\\//g');
-    replaces="-e 's/{{$var}}/${value}/g' $replaces"    
+    replaces="-e 's/{{$var}}/${value}/g' $replaces"
 done
 
 escaped_template_path=$(echo $template | sed 's/ /\\ /g')
