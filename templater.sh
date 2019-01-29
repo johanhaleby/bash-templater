@@ -122,7 +122,7 @@ var_value() {
 replaces=""
 
 # Reads default values defined as {{VAR=value}} and delete those lines
-# There are evaluated, so you can do {{PATH=$HOME}} or {{PATH=`pwd`}}
+# These are evaluated, so you can do {{PATH=$HOME}} or {{PATH=`pwd`}}
 # You can even reference variables defined in the template before
 defaults=$(grep -oE '^\{\{[A-Za-z0-9_]+=.+\}\}' "${template}" | sed -e 's/^{{//' -e 's/}}$//')
 
