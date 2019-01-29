@@ -128,7 +128,7 @@ defaults=$(grep -oE '^\{\{[A-Za-z0-9_]+=.+\}\}' "${template}" | sed -e 's/^{{//'
 
 for default in $defaults; do
     var=$(echo "$default" | grep -oE "^[A-Za-z0-9_]+")
-    current=`var_value $var`
+    current=$(var_value $var)
 
     # Replace only if var is not set
     if [[ -z "$current" ]]; then
@@ -145,7 +145,7 @@ vars=$(echo $vars | sort | uniq)
 
 if [[ "$print_only" == "true" ]]; then
     for var in $vars; do
-        value=`var_value $var`
+        value=$(var_value $var)
         echo "$var = $value"
     done
     exit 0
