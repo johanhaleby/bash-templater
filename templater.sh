@@ -44,6 +44,8 @@ where:
         Don't do anything, just print the result of the variable expansion(s)
     -f, --file
         Specify a file to read variables from
+    -r, --replace
+        Replace template file with rendered version
     -s, --silent
         Don't print warning messages (for example if no variables are found)
 
@@ -75,6 +77,9 @@ if [ "$#" -ne 0 ]; then
             ;;        
         -p|--print)
             print_only="true"
+            ;;
+        -r|--replace)
+            replace="true"
             ;;
         -f|--file)
             config_file="$2"
@@ -165,5 +170,9 @@ for var in $vars; do
     replaces="-e 's/{{$var}}/${value}/g' $replaces"    
 done
 
+if [[ "$replace" == "true" ]]; then
+    SED_OPT="-i .bak"
+fi
+
 escaped_template_path=$(echo $template | sed 's/ /\\ /g')
-eval sed $replaces "$escaped_template_path"
+eval sed $SED_OPT $replaces "$escaped_template_path"
