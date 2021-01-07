@@ -34,6 +34,8 @@ readonly PROGNAME=$(basename $0)
 config_file="<none>"
 print_only="false"
 silent="false"
+nounset="false"
+verbose="false"
 
 usage="${PROGNAME} [-h] [-d] [-f] [-s] -- 
 
@@ -46,6 +48,10 @@ where:
         Specify a file to read variables from
     -s, --silent
         Don't print warning messages (for example if no variables are found)
+    -u, --nounset
+        Unset variables throws error instead of a warning
+    -v, --verbose
+        Verbose output
 
 examples:
     VAR1=Something VAR2=1.2.3 ${PROGNAME} test.txt 
@@ -57,13 +63,6 @@ if [ $# -eq 0 ]; then
   exit 1    
 fi
 
-if [[ ! -f "${1}" ]]; then
-    echo "You need to specify a template file" >&2
-    echo "$usage"
-    exit 1
-fi
-
-template="${1}"
 
 if [ "$#" -ne 0 ]; then
     while [ "$#" -gt 0 ]
@@ -76,32 +75,47 @@ if [ "$#" -ne 0 ]; then
         -p|--print)
             print_only="true"
             ;;
-        -f|--file)
-            config_file="$2"
+        -f|--file) shift
+            config_file="$1"
             ;;
         -s|--silent)
             silent="true"
             ;;
-        --)
-            break
+        -u|--nounset)
+            nounset="true"
+            ;;
+        -v|--verbose)
+            verbose="true"
             ;;
         -*)
             echo "Invalid option '$1'. Use --help to see the valid options" >&2
             exit 1
             ;;
-        # an option argument, continue
-        *)  ;;
+        # an option argument, this must be the template
+        *)  
+            template="$1"
+        ;;
         esac
         shift
     done
 fi
 
-vars=$(grep -oE '\{\{[A-Za-z0-9_]+\}\}' "${template}" | sort | uniq | sed -e 's/^{{//' -e 's/}}$//')
+if [[ ! -f "$template" ]]; then
+    echo "You need to specify a template file" >&2
+    echo "$usage"
+    exit 1
+fi
+
+
+
+vars=$(grep -oE '\{\{\s*[A-Za-z0-9_]+\s*\}\}' "$template" | sort | uniq | sed -e 's/^{{//' -e 's/}}$//')
 
 if [[ -z "$vars" ]]; then
-    if [ "$silent" == "false" ]; then
-        echo "Warning: No variable was found in ${template}, syntax is {{VAR}}" >&2
+    if [ "$verbose" == "true" ]; then
+        echo "Warning: No variable was found in ${template}" >&2
     fi
+    cat $template
+    exit 0 
 fi
 
 # Load variables from file if needed
@@ -111,42 +125,72 @@ if [ "${config_file}" != "<none>" ]; then
       echo "$usage"      
       exit 1
     fi
-
+    _pwd=$PWD
+    cd "$(dirname "$config_file")"
     source "${config_file}"
+    cd "$_pwd"
 fi    
 
 var_value() {
-    eval echo \$$1
+    var="${1}"
+    eval echo \$"${var}"
 }
 
-replaces=""
+##
+# Escape custom characters in a string
+# Example: escape "ab'\c" '\' "'"   ===>  ab\'\\c
+#
+function escape_chars() {
+    local content="${1}"
+    shift
+
+    for char in "$@"; do
+        content="${content//${char}/\\${char}}"
+    done
+
+    echo "${content}"
+}
+
+function echo_var() {
+    local var="${1}"
+    local content="${2}"
+    local escaped="$(escape_chars "${content}" "\\" '"')"
+
+    echo "${var}=\"${escaped}\""
+}
+
+declare -a replaces
+replaces=()
 
 # Reads default values defined as {{VAR=value}} and delete those lines
 # There are evaluated, so you can do {{PATH=$HOME}} or {{PATH=`pwd`}}
 # You can even reference variables defined in the template before
 defaults=$(grep -oE '^\{\{[A-Za-z0-9_]+=.+\}\}' "${template}" | sed -e 's/^{{//' -e 's/}}$//')
-
+#????defaults=$(grep -oE '^\{\{[A-Za-z0-9_]+=.+\}\}$' "${template}" | sed -e 's/^{{//' -e 's/}}$//')
+IFS=$'\n'
 for default in $defaults; do
-    var=$(echo "$default" | grep -oE "^[A-Za-z0-9_]+")
-    current=`var_value $var`
+    var=$(echo "${default}" | grep -oE "^[A-Za-z0-9_]+")
+    current="$(var_value "${var}")"
 
     # Replace only if var is not set
-    if [[ -z "$current" ]]; then
-        eval $default
+    if [[ -n "$current" ]]; then
+        eval "$(echo_var "${var}" "${current}")"
+    else
+        eval "${default}"
     fi
 
     # remove define line
-    replaces="-e '/^{{$var=/d' $replaces"
-    vars="$vars
-$current"
+    replaces+=("-e")
+    replaces+=("/^{{${var}=/d")
+    vars="${vars} ${var}"
 done
 
-vars=$(echo $vars | sort | uniq)
+vars="$(echo "${vars}" | tr " " "\n" | sort | uniq)"
 
 if [[ "$print_only" == "true" ]]; then
     for var in $vars; do
-        value=`var_value $var`
-        echo "$var = $value"
+        value="$(var_value "${var}")"
+        echo_var "${var}" "${value}"
     done
     exit 0
 fi
@@ -155,15 +199,18 @@ fi
 for var in $vars; do
     value=$(var_value $var | sed -e "s;\&;\\\&;g" -e "s;\ ;\\\ ;g") # '&' and <space> is escaped 
     if [[ -z "$value" ]]; then
-        if [ $silent == "false" ]; then
-            echo "Warning: $var is not defined and no default is set, replacing by empty" >&2
+        if [[ $nounset == "false" ]]; then
+            [ $silent == "true" ] || echo "Warning: $var is not defined and no default is set, replacing by empty" >&2
+        else
+            echo "ERROR: $var is not defined and no default is set." >&2
+            exit 1
         fi
     fi
 
     # Escape slashes
-    value=$(echo "$value" | sed 's/\//\\\//g');
-    replaces="-e 's/{{$var}}/${value}/g' $replaces"    
+    value="$(escape_chars "${value}" "\\" '/' ' ')";
+    replaces+=("-e")
+    replaces+=("s/{{\s*${var}\s*}}/${value}/g")
 done
 
-escaped_template_path=$(echo $template | sed 's/ /\\ /g')
-eval sed $replaces "$escaped_template_path"
+sed "${replaces[@]}" "${template}"
